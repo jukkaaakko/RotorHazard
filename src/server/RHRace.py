@@ -61,6 +61,7 @@ class WinCondition():
     FIRST_TO_LAP_X = 2
     FASTEST_LAP = 3 # Not yet implemented
     FASTEST_3_CONSECUTIVE = 4 # Not yet implemented
+    FASTEST_5_CONSECUTIVE = 5 # Not yet implemented
 
 class RaceStatus():
     READY = 0

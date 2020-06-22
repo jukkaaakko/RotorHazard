@@ -1319,7 +1319,8 @@ function build_leaderboard(leaderboard, display_type, meta) {
 		display_type == 'heat' ||
 		display_type == 'round' ||
 		display_type == 'current') {
-		header_row.append('<th class="consecutive">' + __('3 Consecutive') + '</th>');
+		header_row.append('<th class="consecutive">' + __('3/5 Consecutive') + '</th>');
+		/*header_row.append('<th class="consecutive">' + __('5 Consecutive') + '</th>');*/
 	}
 	header.append(header_row);
 	table.append(header);

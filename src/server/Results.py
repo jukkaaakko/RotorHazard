@@ -378,8 +378,12 @@ def calc_leaderboard(DB, **params):
             fastest_lap.append(fast_lap)
 
         gevent.sleep()
-        # find best consecutive 3 laps
-        if max_laps[i] < 3:
+        # find best consecutive 3/5 laps
+	if race_format.win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
+		num_cons=3
+	elif race_format.win_condition == WinCondition.FASTEST_5_CONSECUTIVE:
+		num_cons=5
+        if max_laps[i] < num_cons:
             consecutives.append(None)
             consecutives_source.append(None)
         else:
@@ -388,12 +392,18 @@ def calc_leaderboard(DB, **params):
             if USE_CURRENT:
                 thisrace = current_laps[i][1:]
 
-                for j in range(len(thisrace) - 2):
+                for j in range(len(thisrace) - (num_cons-1)):
                     gevent.sleep()
-                    all_consecutives.append({
-                        'time': thisrace[j]['lap_time'] + thisrace[j+1]['lap_time'] + thisrace[j+2]['lap_time'],
-                        'race_id': None,
-                    })
+                    if num_cons == 3:
+                        all_consecutives.append({
+                            'time': thisrace[j]['lap_time'] + thisrace[j+1]['lap_time'] + thisrace[j+2]['lap_time'],
+                            'race_id': None,
+                        })
+                    else:
+                        all_consecutives.append({
+                            'time': thisrace[j]['lap_time'] + thisrace[j+1]['lap_time'] + thisrace[j+2]['lap_time'] + thisrace[j+3]['lap_time'] + thisrace[j+4]['lap_time'],
+                            'race_id': None,
+                        })
 
             else:
                 for race_id in racelist:
@@ -405,13 +415,19 @@ def calc_leaderboard(DB, **params):
                             ~Database.SavedRaceLap.id.in_(holeshots[i]) \
                             ).all()
 
-                    if len(thisrace) >= 3:
-                        for j in range(len(thisrace) - 2):
+                    if len(thisrace) >= num_cons:
+                        for j in range(len(thisrace) - (num_cons-1)):
                             gevent.sleep()
-                            all_consecutives.append({
-                                'time': thisrace[j].lap_time + thisrace[j+1].lap_time + thisrace[j+2].lap_time,
-                                'race_id': race_id
-                            })
+                            if num_cons == 3:
+                                all_consecutives.append({
+                                    'time': thisrace[j].lap_time + thisrace[j+1].lap_time + thisrace[j+2].lap_time,
+                                    'race_id': race_id
+                                })
+                            else:
+                                all_consecutives.append({
+                                    'time': thisrace[j].lap_time + thisrace[j+1].lap_time + thisrace[j+2].lap_time + thisrace[j+3].lap_time + thisrace[j+4].lap_time,
+                                    'race_id': race_id
+                                })
 
             # Sort consecutives
             all_consecutives.sort(key = lambda x: (x['time'] is None, x['time']))
@@ -566,7 +582,7 @@ def calc_leaderboard(DB, **params):
     }
 
     if race_format:
-        if race_format.win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
+        if race_format.win_condition == WinCondition.FASTEST_3_CONSECUTIVE or race_format.win_condition == WinCondition.FASTEST_5_CONSECUTIVE:
             primary_leaderboard = 'by_consecutives'
         elif race_format.win_condition == WinCondition.FASTEST_LAP:
             primary_leaderboard = 'by_fastest_lap'
