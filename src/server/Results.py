@@ -128,6 +128,7 @@ def calc_leaderboard(DB, **params):
     USE_ROUND = None
     USE_HEAT = None
     USE_CLASS = None
+    selected_races = []
 
     if ('current_race' in params):
         USE_CURRENT = True
@@ -264,6 +265,10 @@ def calc_leaderboard(DB, **params):
     fastest_lap_source = []
     consecutives_source = []
 
+    num_consecutive_laps = 99
+    if race_format and race_format.win_condition == WinCondition.FASTEST_CONSECUTIVE:
+        num_consecutive_laps = race_format.number_laps_win
+
     for i, pilot in enumerate(pilot_ids):
         gevent.sleep()
         # Get the total race time for each pilot
@@ -378,12 +383,10 @@ def calc_leaderboard(DB, **params):
             fastest_lap.append(fast_lap)
 
         gevent.sleep()
-        # find best consecutive 3/5 laps
-	if race_format.win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
-		num_cons=3
-	elif race_format.win_condition == WinCondition.FASTEST_5_CONSECUTIVE:
-		num_cons=5
-        if max_laps[i] < num_cons:
+
+        # find best consecutive laps
+
+        if False and max_laps[i] < num_consecutive_laps:
             consecutives.append(None)
             consecutives_source.append(None)
         else:
@@ -391,43 +394,42 @@ def calc_leaderboard(DB, **params):
 
             if USE_CURRENT:
                 thisrace = current_laps[i][1:]
+                num_consecutive_laps = race_format.number_laps_win
 
-                for j in range(len(thisrace) - (num_cons-1)):
-                    gevent.sleep()
-                    if num_cons == 3:
+                if len(thisrace) >= num_consecutive_laps:
+                    for j in range(len(thisrace) - (num_consecutive_laps-1)):
+                        gevent.sleep()
+
                         all_consecutives.append({
-                            'time': thisrace[j]['lap_time'] + thisrace[j+1]['lap_time'] + thisrace[j+2]['lap_time'],
+                            'time': sum([e['lap_time'] for e in thisrace[j:(j+num_consecutive_laps)]]),
                             'race_id': None,
-                        })
-                    else:
-                        all_consecutives.append({
-                            'time': thisrace[j]['lap_time'] + thisrace[j+1]['lap_time'] + thisrace[j+2]['lap_time'] + thisrace[j+3]['lap_time'] + thisrace[j+4]['lap_time'],
-                            'race_id': None,
+                            'lap_index': j+1,
                         })
 
             else:
-                for race_id in racelist:
+                for _race in selected_races:
+                    race_id = _race.id
                     gevent.sleep()
                     thisrace = DB.session.query(Database.SavedRaceLap.lap_time) \
-                        .filter(Database.SavedRaceLap.pilot_id == pilot, \
-                            Database.SavedRaceLap.race_id == race_id, \
-                            Database.SavedRaceLap.deleted != 1, \
-                            ~Database.SavedRaceLap.id.in_(holeshots[i]) \
-                            ).all()
+                        .filter(Database.SavedRaceLap.pilot_id == pilot,
+                                Database.SavedRaceLap.race_id == race_id,
+                                Database.SavedRaceLap.deleted != 1,
+                                ~Database.SavedRaceLap.id.in_(holeshots[i])
+                                ).all()
 
-                    if len(thisrace) >= num_cons:
-                        for j in range(len(thisrace) - (num_cons-1)):
+                    _race_format = Database.RaceFormat.query.get(_race.format_id)
+                    num_consecutive_laps = _race_format.number_laps_win
+                    logger.info("race_format: %s" % _race_format.number_laps_win)
+
+                    if len(thisrace) >= num_consecutive_laps:
+                        for j in range(len(thisrace) - (num_consecutive_laps-1)):
                             gevent.sleep()
-                            if num_cons == 3:
-                                all_consecutives.append({
-                                    'time': thisrace[j].lap_time + thisrace[j+1].lap_time + thisrace[j+2].lap_time,
-                                    'race_id': race_id
-                                })
-                            else:
-                                all_consecutives.append({
-                                    'time': thisrace[j].lap_time + thisrace[j+1].lap_time + thisrace[j+2].lap_time + thisrace[j+3].lap_time + thisrace[j+4].lap_time,
-                                    'race_id': race_id
-                                })
+
+                            all_consecutives.append({
+                                'time': sum([e.lap_time for e in thisrace[j:(j+num_consecutive_laps)]]),
+                                'race_id': race_id,
+                                'lap_index': j+1,
+                            })
 
             # Sort consecutives
             all_consecutives.sort(key = lambda x: (x['time'] is None, x['time']))
@@ -435,9 +437,11 @@ def calc_leaderboard(DB, **params):
 
             if all_consecutives:
                 consecutives.append(all_consecutives[0]['time'])
+                consecutive_lap_start = __('Lap') + ' ' + str(all_consecutives[0]['lap_index'])
 
                 if USE_CURRENT:
-                    consecutives_source.append(None)
+                    #consecutives_source.append(None)
+                    consecutives_source.append(consecutive_lap_start)
                 else:
                     source_query = Database.SavedRaceMeta.query.get(all_consecutives[0]['race_id'])
                     if source_query:
@@ -450,7 +454,7 @@ def calc_leaderboard(DB, **params):
                         else:
                             source_text = __('Heat') + ' ' + str(fast_lap_heat) + ' / ' + __('Round') + ' ' + str(fast_lap_round)
 
-                        consecutives_source.append(source_text)
+                        consecutives_source.append(source_text + ' / ' + consecutive_lap_start)
                     else:
                         consecutives_source.append(None)
 
@@ -492,6 +496,7 @@ def calc_leaderboard(DB, **params):
             'fastest_lap_raw': row[4],
             'team_name': row[5],
             'consecutives': RHUtils.time_format(row[6]),
+            'consecutive_laps': num_consecutive_laps,
             'consecutives_raw': row[6],
             'fastest_lap_source': row[7],
             'consecutives_source': row[8],
@@ -529,6 +534,7 @@ def calc_leaderboard(DB, **params):
             'fastest_lap_raw': row[4],
             'team_name': row[5],
             'consecutives': RHUtils.time_format(row[6]),
+            'consecutive_laps': num_consecutive_laps,
             'consecutives_raw': row[6],
             'fastest_lap_source': row[7],
             'consecutives_source': row[8],
@@ -566,6 +572,7 @@ def calc_leaderboard(DB, **params):
             'fastest_lap_raw': row[4],
             'team_name': row[5],
             'consecutives': RHUtils.time_format(row[6]),
+            'consecutive_laps': num_consecutive_laps,
             'consecutives_raw': row[6],
             'fastest_lap_source': row[7],
             'consecutives_source': row[8],
@@ -582,7 +589,7 @@ def calc_leaderboard(DB, **params):
     }
 
     if race_format:
-        if race_format.win_condition == WinCondition.FASTEST_3_CONSECUTIVE or race_format.win_condition == WinCondition.FASTEST_5_CONSECUTIVE:
+        if race_format.win_condition == WinCondition.FASTEST_CONSECUTIVE:
             primary_leaderboard = 'by_consecutives'
         elif race_format.win_condition == WinCondition.FASTEST_LAP:
             primary_leaderboard = 'by_fastest_lap'
@@ -601,7 +608,9 @@ def calc_leaderboard(DB, **params):
         leaderboard_output['meta'] = {
             'primary_leaderboard': 'by_race_time',
             'win_condition': WinCondition.NONE,
-            'team_racing_mode': False
+            'team_racing_mode': False,
         }
+
+    leaderboard_output['meta']['num_consecutive_laps'] = "%u " % num_consecutive_laps
 
     return leaderboard_output

@@ -237,7 +237,7 @@ class VRxController:
             # *** leaderboard = results[results['meta']['primary_leaderboard']]
             win_condition = RACE.format.win_condition
 
-            if win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
+            if win_condition == WinCondition.FASTEST_CONSECUTIVE:
                 leaderboard = results['by_consecutives']
             elif win_condition == WinCondition.FASTEST_LAP:
                 leaderboard = results['by_fastest_lap']
@@ -265,7 +265,7 @@ class VRxController:
                 next_rank_split_result = leaderboard[rank_index - 1]
 
                 if next_rank_split_result['total_time_raw']:
-                    if win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
+                    if win_condition == WinCondition.FASTEST_CONSECUTIVE:
                         if next_rank_split_result['consecutives_raw']:
                             next_rank_split = result['consecutives_raw'] - next_rank_split_result['consecutives_raw']
                     elif win_condition == WinCondition.FASTEST_LAP:
@@ -280,7 +280,7 @@ class VRxController:
                 # check split to self
                 next_rank_split_result = leaderboard[rank_index]
 
-                if win_condition == WinCondition.FASTEST_3_CONSECUTIVE or win_condition == WinCondition.FASTEST_LAP:
+                if win_condition == WinCondition.FASTEST_CONSECUTIVE or win_condition == WinCondition.FASTEST_LAP:
                     if next_rank_split_result['fastest_lap_raw']:
                         if result['last_lap_raw'] > next_rank_split_result['fastest_lap_raw']:
                             next_rank_split = result['last_lap_raw'] - next_rank_split_result['fastest_lap_raw']
@@ -292,7 +292,7 @@ class VRxController:
                 prev_rank_split_result = leaderboard[rank_index - 1]
 
                 if prev_rank_split_result['total_time_raw']:
-                    if win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
+                    if win_condition == WinCondition.FASTEST_CONSECUTIVE:
                         if prev_rank_split_result['consecutives_raw']:
                             prev_rank_split = result['consecutives_raw'] - prev_rank_split_result['consecutives_raw']
                             prev_rank_split_fastest = prev_rank_split
@@ -313,7 +313,7 @@ class VRxController:
                 first_rank_split_result = leaderboard[0]
 
                 if next_rank_split_result['total_time_raw']:
-                    if win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
+                    if win_condition == WinCondition.FASTEST_CONSECUTIVE:
                         if first_rank_split_result['consecutives_raw']:
                             first_rank_split = result['consecutives_raw'] - first_rank_split_result['consecutives_raw']
                     elif win_condition == WinCondition.FASTEST_LAP:
@@ -391,12 +391,14 @@ class VRxController:
             # "Pos-Callsign L[n]|0:00:00"
             message = osd['position_prefix'] + osd['position'] + '-' + osd['callsign'][:10] + ' ' + osd['lap_prefix'] + osd['lap_number'] + '|' + osd['last_lap_time']
 
-            if win_condition == WinCondition.FASTEST_3_CONSECUTIVE:
+            if win_condition == WinCondition.FASTEST_CONSECUTIVE:
+                num_laps = result['laps']
+                consecutive_laps = result['consecutive_laps']
                 # "Pos-Callsign L[n]|0:00:00 | #/0:00.000" (current | best consecutives)
-                if result['laps'] >= 3:
-                    message += ' | 3/' + osd['consecutives']
-                elif result['laps'] == 2:
-                    message += ' | 2/' + osd['total_time_laps']
+                if num_laps >= consecutive_laps:
+                    message += ' | %u/%s' % (consecutive_laps, osd['consecutives'])
+                elif num_laps > 1:
+                    message += ' | %u/%s' % (num_laps, osd['total_time_laps'])
 
             elif win_condition == WinCondition.FASTEST_LAP:
                 if next_rank_split:
@@ -423,7 +425,7 @@ class VRxController:
 
             # show split when next pilot crosses
             if next_rank_split:
-                if win_condition == WinCondition.FASTEST_3_CONSECUTIVE or win_condition == WinCondition.FASTEST_LAP:
+                if win_condition == WinCondition.FASTEST_CONSECUTIVE or win_condition == WinCondition.FASTEST_LAP:
                     # don't update
                     pass
 

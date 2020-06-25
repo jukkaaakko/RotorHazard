@@ -1299,6 +1299,7 @@
 		})
 
 		$('#set_win_condition').change(function (event) {
+			condition_changed(parseInt($(this).val()));
 			var data = {
 				win_condition: parseInt($(this).val())
 			};
@@ -1625,6 +1626,12 @@
 	function speak(obj) {
 		$(obj).articulate('setVoice','name', rotorhazard.voice_language).articulate('speak');
 	};
+
+	function condition_changed(value) {
+		var item = document.getElementById("number_laps_block");
+		var field = document.getElementById("set_number_laps_win");
+		field.hidden = item.hidden = !(value == 2 || value == 4);
+	}
 </script>
 {% endblock %} {% block content %}
 <main class="page-settings">
@@ -2073,9 +2080,9 @@
 				</select>
 			</li>
 			<li>
-				<div class="label-block">
-					<label for="set_number_laps_win">{{ __('Number of Laps to Win') }}</label>
-					<p class="desc">{{ __('Used with First to X Laps races') }}</p>
+				<div class="label-block" id="number_laps_block">
+					<label for="set_number_laps_win">{{ __('Number of Laps') }}</label>
+					<!--<p class="desc">{{ __("Used with 'First to X Laps' or 'Fastest Consecutive Laps' races") }}</p>-->
 				</div>
 				<input type="number" id="set_number_laps_win" min="0" max="999">
 			</li>
@@ -2083,12 +2090,12 @@
 				<div class="label-block">
 					<label for="set_win_condition">{{ __('Win Condition') }}</label>
 				</div>
+				<!--<select id="set_win_condition" onchange="condition_changed(this.value)">-->
 				<select id="set_win_condition">
 					<option value="1">{{ __('Most Laps') }}</option>
 					<option value="2">{{ __('First to X Laps') }}</option>
 					<option value="3">{{ __('Fastest Lap') }}</option>
-					<option value="4">{{ __('Fastest 3 Consecutive Laps') }}</option>
-					<option value="5">{{ __('Fastest 5 Consecutive Laps') }}</option>
+					<option value="4">{{ __('Fastest Consecutive Laps') }}</option>
 					<option value="0">{{ __('None') }}</option>
 				</select>
 			</li>
