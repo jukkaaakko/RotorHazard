@@ -4972,7 +4972,7 @@ try:
 except (ImportError, RuntimeError, IOError) as ex:
     logger.info('Unable to initialize nodes via ' + interface_type + 'Interface:  ' + str(ex))
 if not INTERFACE or not INTERFACE.nodes or len(INTERFACE.nodes) <= 0:
-    if not Config.SERIAL_PORTS or len(Config.SERIAL_PORTS) <= 0:
+    if not Config.SERIAL_PORTS or len(Config.SERIAL_PORTS) <= 0 or not INTERFACE.nodes:
         interfaceModule = importlib.import_module('MockInterface')
         INTERFACE = interfaceModule.get_hardware_interface(config=Config)
     else:

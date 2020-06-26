@@ -113,9 +113,12 @@ class SerialNode(Node):
 def discover(idxOffset, config, *args, **kwargs):
     nodes = []
     for index, comm in enumerate(getattr(config, 'SERIAL_PORTS', [])):
-        node = SerialNode(index+idxOffset, comm)
-        logger.info("Serial node {0} found at port {1}".format(index+idxOffset+1, node.serial.name))
-        nodes.append(node)
+        try:
+            node = SerialNode(index+idxOffset, comm)
+            logger.info("Serial node {0} found at port {1}".format(index+idxOffset+1, node.serial.name))
+            nodes.append(node)
+        except IOError as err:
+            logger.error("Cannot init serial '%s'" % err)
 
     gevent.sleep(BOOTLOADER_CHILL_TIME)
     return nodes
